@@ -265,7 +265,7 @@ let entries=[],results={},picks={},srPicks={},cwsPicks={left:null,right:null};
 // Fetch a sheet tab as an array of row-objects using the gviz JSON endpoint.
 // gviz returns CORS-friendly JSON wrapped in a JS callback; we strip that wrapper.
 async function fetchSheetTab(tabName){
-  const url=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(tabName)}`;
+  const url=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&sheet=${encodeURIComponent(tabName)}`;
   const r=await fetch(url);
   const text=await r.text();
   const json=JSON.parse(text.slice(text.indexOf("{"),text.lastIndexOf("}")+1));
@@ -306,6 +306,9 @@ async function loadData(){
       });
     }
     entries.forEach(e=>calcE(e));
+    console.log("[pool] loaded",entries.length,"entries");
+    console.log("[pool] results:",results);
+    console.log("[pool] entries:",entries);
   }catch(e){
     console.error("Failed to load from Google Sheet:",e);
   }
