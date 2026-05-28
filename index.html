@@ -116,7 +116,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="tabs">
     <button class="tab on" onclick="swTab('enter',this)">Enter picks</button>
     <button class="tab" onclick="swTab('leaderboard',this)">Leaderboard</button>
-    <button class="tab" onclick="swTab('admin',this)">Admin</button>
+    <button class="tab" onclick="swTab('admin',this)">How results work</button>
   </div>
 
   <!-- ENTER PICKS -->
@@ -173,7 +173,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
     <div id="eMsg" class="msg"></div>
     <button class="btn btn-p" onclick="submitEntry()" id="submitBtn">Submit picks</button>
-    <span id="editMode" style="display:none">&nbsp;&nbsp;<button class="btn" onclick="cancelEdit()">Cancel</button></span>
+    <p style="font-size:11px;color:#888;margin-top:8px">Need to change your picks? Ask the admin to delete your row in the spreadsheet, then resubmit.</p>
   </div>
 
   <!-- LEADERBOARD -->
@@ -198,48 +198,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <button class="btn" style="margin-top:10px;font-size:12px;padding:6px 14px" onclick="refresh()">↻ Refresh</button>
   </div>
 
-  <!-- ADMIN -->
+  <!-- HOW RESULTS WORK -->
   <div class="pnl" id="pnl-admin">
     <div class="card">
-      <h3>Admin panel</h3>
-      <div class="pin-row">
-        <span style="font-size:13px;font-weight:500">🔐 Admin pin:</span>
-        <input type="password" id="adminPin" placeholder="enter pin" value="">
-        <span style="font-size:11px;color:#888">(default: 2026)</span>
-      </div>
-      <p class="note">Enter actual results as teams advance. All scores recalculate automatically across every entry.</p>
-
-      <p style="font-size:13px;font-weight:600;margin-bottom:9px">R1 — Regional winners</p>
-      <div class="ag" id="aGrid"></div>
-
-      <p style="font-size:13px;font-weight:600;margin:14px 0 9px">R2 — Super regional winners</p>
-      <div class="ag" id="aSrGrid"></div>
-
-      <p style="font-size:13px;font-weight:600;margin:14px 0 9px">R3 — CWS finalists (left &amp; right bracket winners)</p>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-        <div class="ar"><h4>Left bracket finalist</h4><select id="aFinLeft"><option value="">TBD</option></select></div>
-        <div class="ar"><h4>Right bracket finalist</h4><select id="aFinRight"><option value="">TBD</option></select></div>
-      </div>
-
-      <p style="font-size:13px;font-weight:600;margin-bottom:9px">R4 — National champion</p>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-        <div class="ar"><h4>National champion</h4><select id="aChamp"><option value="">TBD</option></select></div>
-      </div>
-
-      <div style="margin-top:4px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        <button class="btn btn-p" style="font-size:12px" onclick="saveResults()">Save results &amp; recalculate scores</button>
-        <div class="fld" style="flex-direction:row;align-items:center;gap:6px">
-          <label style="white-space:nowrap;font-size:11px">Set new pin:</label>
-          <input type="password" id="newPin" placeholder="new pin" style="width:110px;padding:6px 9px;border:1px solid #d0cfc8;border-radius:7px;font-size:13px;font-family:inherit">
-          <button class="btn" style="font-size:12px;padding:6px 12px" onclick="changePin()">Update</button>
-        </div>
-      </div>
-      <div id="aMsg" class="msg" style="margin-top:10px"></div>
+      <h3>How results &amp; entries work</h3>
+      <p class="note">This pool is backed by a Google Sheet. Everyone's picks live in the <b>Entries</b> tab. Tournament outcomes live in the <b>Results</b> tab.</p>
+      <p style="font-size:13px;font-weight:600;margin:14px 0 6px">For players</p>
+      <p class="note">Fill out the form on the <b>Enter picks</b> tab and hit Submit. Your entry shows up on the leaderboard within a minute or two. To change picks, ask the admin to delete your row, then resubmit.</p>
+      <p style="font-size:13px;font-weight:600;margin:14px 0 6px">For the admin</p>
+      <p class="note">As games finish, open the <b>Results</b> tab of the Google Sheet and type the winning team into the matching column (e.g. <code>r_UCLA</code> for the LA regional, <code>sr_sr1</code> for the first super, <code>finLeft</code> / <code>finRight</code> / <code>champ</code> for the finals). Every browser viewing this page will pick up the new results and recalculate scores on the next refresh.</p>
+      <p class="note">Team names must match exactly (case-sensitive) — copy from the team lists if unsure.</p>
     </div>
-
-    <div class="divider"></div>
-    <h3 style="font-size:14px;font-weight:600;margin-bottom:10px">All entries</h3>
-    <div id="aList"><div class="loader"><span class="spin"></span>Loading…</div></div>
   </div>
 </div>
 
@@ -264,7 +233,21 @@ const REGS=[
 ];
 const HOSTS=REGS.map(r=>r.h);
 const ALL64=REGS.flatMap(r=>r.t).sort((a,b)=>a.localeCompare(b));
-const STORE_KEY="bc_bp2026_v3";
+
+const SHEET_ID = "1i7aQoA2iSxosVqZ-eD5wt9Vp-lSDKah6r8Gzpg0YSxo";
+
+const ENTRIES_TAB = "Entries"; // expected columns: Timestamp | Name | JSON
+const RESULTS_TAB = "Results"; // one header row of result keys, one data row of values
+
+// Column header text in the Entries tab (Google sets these from the Form
+// question titles — if you rename a Form question, update these to match).
+const ENTRIES_COL_NAME  = "Name";
+const ENTRIES_COL_PICKS = "JSON";
+
+const FORM_ID = "1FAIpQLSfP-Yg5eud4a9dA6rfh4O_KG_ZqzZtGREEo6iwB2T4dwQ_1xw";
+
+const FORM_NAME_FIELD  = "entry.1342857412";  // short-answer: Name
+const FORM_PICKS_FIELD = "entry.1127434919"; // long-answer:  Picks (JSON)
 
 const SUPERS=[
   {id:"sr1",side:"left",  r1:"UCLA",            r2:"West Virginia"},
@@ -277,35 +260,55 @@ const SUPERS=[
   {id:"sr8",side:"right", r1:"Mississippi State",r2:"Georgia"}
 ];
 
-let entries=[],results={},adminPin="2026",editIdx=-1,picks={},srPicks={},cwsPicks={left:null,right:null};
+let entries=[],results={},picks={},srPicks={},cwsPicks={left:null,right:null};
 
-async function apiCall(prompt){
-  const r=await fetch("https://api.anthropic.com/v1/messages",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({
-      model:"claude-sonnet-4-20250514",
-      max_tokens:8000,
-      system:'You are a JSON database. When asked to store data, store it and confirm with {"ok":true}. When asked to retrieve data, return the exact JSON stored. Never add commentary, markdown, or explanation — raw JSON only.',
-      messages:[{role:"user",content:prompt}]
-    })
+// Fetch a sheet tab as an array of row-objects using the gviz JSON endpoint.
+// gviz returns CORS-friendly JSON wrapped in a JS callback; we strip that wrapper.
+async function fetchSheetTab(tabName){
+  const url=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(tabName)}`;
+  const r=await fetch(url);
+  const text=await r.text();
+  const json=JSON.parse(text.slice(text.indexOf("{"),text.lastIndexOf("}")+1));
+  const cols=json.table.cols.map(c=>(c.label||c.id||"").trim());
+  return json.table.rows.map(row=>{
+    const obj={};
+    (row.c||[]).forEach((cell,i)=>{obj[cols[i]]=cell?cell.v:null;});
+    return obj;
   });
-  const d=await r.json();
-  return d.content[0].text.trim().replace(/^```json|^```|```$/g,"").trim();
 }
 
 async function loadData(){
+  entries=[];results={};
   try{
-    const raw=await apiCall(`Retrieve stored data for key "${STORE_KEY}". If nothing is stored, return {"entries":[],"results":{},"pin":"2026"}`);
-    const d=JSON.parse(raw);
-    entries=d.entries||[];
-    results=d.results||{};
-    adminPin=d.pin||"2026";
-  }catch(e){entries=[];results={};adminPin="2026";}
-}
-
-async function saveData(){
-  await apiCall(`Store this JSON under key "${STORE_KEY}": ${JSON.stringify({entries,results,pin:adminPin})}`);
+    const [entryRows,resultRows]=await Promise.all([
+      fetchSheetTab(ENTRIES_TAB),
+      fetchSheetTab(RESULTS_TAB)
+    ]);
+    entries=entryRows.map(r=>{
+      const nm=r[ENTRIES_COL_NAME];
+      const raw=r[ENTRIES_COL_PICKS];
+      if(!nm||!raw)return null;
+      let p;try{p=JSON.parse(raw);}catch(e){return null;}
+      return{
+        name:String(nm).trim(),
+        email:p.email||"",
+        rp:p.rp||{},
+        srp:p.srp||{},
+        cwsp:p.cwsp||{left:"",right:""},
+        champ:p.champ||"",
+        ts:r["Timestamp"]||""
+      };
+    }).filter(Boolean);
+    if(resultRows.length>0){
+      const row=resultRows[0];
+      Object.keys(row).forEach(k=>{
+        if(row[k]!=null&&row[k]!=="")results[k]=String(row[k]).trim();
+      });
+    }
+    entries.forEach(e=>calcE(e));
+  }catch(e){
+    console.error("Failed to load from Google Sheet:",e);
+  }
 }
 
 function calcE(e){
@@ -333,7 +336,6 @@ function swTab(t,btn){
   btn.classList.add("on");
   document.getElementById("pnl-"+t).classList.add("on");
   if(t==="leaderboard")refresh();
-  if(t==="admin")loadAdminTab();
 }
 
 async function refresh(){
@@ -341,13 +343,6 @@ async function refresh(){
   await loadData();
   renderLB();
   updPool();
-}
-
-async function loadAdminTab(){
-  document.getElementById("aList").innerHTML='<div class="loader"><span class="spin"></span>Loading…</div>';
-  await loadData();
-  renderAdminGrid();
-  renderAdminList();
 }
 
 function buildGrid(){
@@ -457,54 +452,37 @@ function fillChampDrop(){
   }
 }
 
-function fillAdminDrops(){
-  const leftSrWinners=SUPERS.filter(s=>s.side==="left").map(s=>results["sr_"+s.id]).filter(Boolean);
-  const rightSrWinners=SUPERS.filter(s=>s.side==="right").map(s=>results["sr_"+s.id]).filter(Boolean);
-  const afl=document.getElementById("aFinLeft");
-  const afr=document.getElementById("aFinRight");
-  const ac=document.getElementById("aChamp");
-  const cvL=results.finLeft||"";
-  const cvR=results.finRight||"";
-  const cvC=results.champ||"";
-  const leftPool=leftSrWinners.length>0?leftSrWinners:ALL64;
-  const rightPool=rightSrWinners.length>0?rightSrWinners:ALL64;
-  const champPool=[cvL,cvR].filter(Boolean).length>0?[cvL,cvR].filter(Boolean):ALL64;
-  afl.innerHTML='<option value="">TBD</option>'+leftPool.map(t=>`<option value="${t}"${t===cvL?" selected":""}>${t}</option>`).join("");
-  afr.innerHTML='<option value="">TBD</option>'+rightPool.map(t=>`<option value="${t}"${t===cvR?" selected":""}>${t}</option>`).join("");
-  ac.innerHTML='<option value="">TBD</option>'+champPool.map(t=>`<option value="${t}"${t===cvC?" selected":""}>${t}</option>`).join("");
-}
-
 async function submitEntry(){
   const nm=document.getElementById("eName").value.trim();
   if(!nm){showMsg("eMsg","Please enter your name.","e");return;}
   const btn=document.getElementById("submitBtn");
-  btn.disabled=true;btn.innerHTML='<span class="spin"></span>Saving…';
+  btn.disabled=true;btn.innerHTML='<span class="spin"></span>Submitting…';
   const rp={};REGS.forEach(r=>{if(picks["r_"+r.h])rp[r.h]=picks["r_"+r.h];});
   const srp={};SUPERS.forEach(s=>{if(srPicks[s.id])srp[s.id]=srPicks[s.id];});
-  const entry={
-    id:editIdx>=0?entries[editIdx].id:(Date.now()+"_"+Math.random().toString(36).slice(2,6)),
-    name:nm,
+  const payload={
     email:document.getElementById("eEmail").value.trim(),
     rp,srp,
     cwsp:{left:cwsPicks.left||"",right:cwsPicks.right||""},
-    champ:document.getElementById("pChamp").value,
-    score:0,r1s:0,r2s:0,r3s:0,r4s:0,
-    ts:new Date().toISOString()
+    champ:document.getElementById("pChamp").value
   };
-  await loadData();
-  calcE(entry);
-  if(editIdx>=0){
-    const i=entries.findIndex(x=>x.id===entry.id);
-    if(i>=0)entries[i]=entry;else entries.push(entry);
-  }else{
-    const dup=entries.findIndex(x=>x.name.trim().toLowerCase()===nm.toLowerCase());
-    if(dup>=0)entries[dup]=entry;else entries.push(entry);
+  const fd=new FormData();
+  fd.append(FORM_NAME_FIELD,nm);
+  fd.append(FORM_PICKS_FIELD,JSON.stringify(payload));
+  try{
+    // no-cors: Google Forms doesn't return CORS headers, so we can't read the
+    // response, but the POST itself does land in the linked spreadsheet.
+    await fetch(`https://docs.google.com/forms/d/e/${FORM_ID}/formResponse`,{
+      method:"POST",
+      mode:"no-cors",
+      body:fd
+    });
+  }catch(e){
+    btn.disabled=false;btn.textContent="Submit picks";
+    showMsg("eMsg","Network error submitting picks. Try again.","e");
+    return;
   }
-  await saveData();
   btn.disabled=false;btn.textContent="Submit picks";
-  showMsg("eMsg",editIdx>=0?`${nm}'s picks updated! ✓`:`${nm} is in! Picks saved 🎉`,"s");
-  editIdx=-1;
-  document.getElementById("editMode").style.display="none";
+  showMsg("eMsg",`${nm} is in! Picks submitted 🎉 (may take ~1 min to appear on the leaderboard)`,"s");
   resetForm();updPool();
 }
 
@@ -526,105 +504,6 @@ function renderLB(){
       <div class="sc" style="color:#999">${e.r4s||0}</div>
     </div>`).join("");
 }
-
-function renderAdminGrid(){
-  document.getElementById("aGrid").innerHTML=REGS.map(r=>`
-    <div class="ar"><h4>${r.n}</h4>
-      <select id="ar_${r.h.replace(/[^a-zA-Z]/g,'_')}">
-        <option value="">TBD</option>
-        ${r.t.map(t=>`<option value="${t}"${results["r_"+r.h]===t?" selected":""}>${t}</option>`).join("")}
-      </select>
-    </div>`).join("");
-  document.getElementById("aSrGrid").innerHTML=SUPERS.map(s=>{
-    const t1=results["r_"+s.r1]||s.r1+" regional winner";
-    const t2=results["r_"+s.r2]||s.r2+" regional winner";
-    const v1=results["r_"+s.r1]||s.r1;
-    const v2=results["r_"+s.r2]||s.r2;
-    return `<div class="ar"><h4>${s.r1} vs. ${s.r2}</h4>
-      <select id="asr_${s.id}">
-        <option value="">TBD</option>
-        <option value="${v1}"${results["sr_"+s.id]===v1?" selected":""}>${t1}</option>
-        <option value="${v2}"${results["sr_"+s.id]===v2?" selected":""}>${t2}</option>
-      </select>
-    </div>`;
-  }).join("");
-  fillAdminDrops();
-}
-
-function renderAdminList(){
-  const l=document.getElementById("aList");
-  if(!entries.length){l.innerHTML='<p style="color:#888;font-size:13px">No entries yet.</p>';return;}
-  l.innerHTML=entries.map((e,i)=>`
-    <div class="erow">
-      <div style="flex:1;font-weight:600;font-size:13px">${e.name}</div>
-      <div style="font-size:11px;color:#888">${Object.keys(e.rp||{}).length}/16 · ${Object.keys(e.srp||{}).length}/8 · ${(e.cwsp&&e.cwsp.left?"L✓":"")}${(e.cwsp&&e.cwsp.right?"R✓":"")}</div>
-      <div style="font-size:11px;color:#888;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.champ||"—"}</div>
-      <span style="font-size:12px;font-weight:600;color:#888;min-width:44px;text-align:right">${e.score||0} pts</span>
-      <button class="btn" style="font-size:11px;padding:4px 10px" onclick="editEntry(${i})">Edit</button>
-      <button class="btn btn-d" style="font-size:11px;padding:4px 10px" onclick="delEntry(${i})">Delete</button>
-    </div>`).join("");
-}
-
-async function saveResults(){
-  const pin=document.getElementById("adminPin").value;
-  if(pin!==adminPin){showMsg("aMsg","Incorrect pin.","e");return;}
-  REGS.forEach(r=>{
-    const s=document.getElementById("ar_"+r.h.replace(/[^a-zA-Z]/g,"_"));
-    if(s)results["r_"+r.h]=s.value||"";
-  });
-  SUPERS.forEach(s=>{
-    const el=document.getElementById("asr_"+s.id);
-    if(el)results["sr_"+s.id]=el.value||"";
-  });
-  results.finLeft=document.getElementById("aFinLeft").value||"";
-  results.finRight=document.getElementById("aFinRight").value||"";
-  results.champ=document.getElementById("aChamp").value||"";
-  entries.forEach(e=>calcE(e));
-  const btn=event.target;btn.disabled=true;btn.innerHTML='<span class="spin"></span>Saving…';
-  await saveData();
-  btn.disabled=false;btn.innerHTML="Save results &amp; recalculate scores";
-  showMsg("aMsg","Results saved! All scores updated.","s");
-  renderAdminList();updPool();
-}
-
-async function changePin(){
-  const pin=document.getElementById("adminPin").value;
-  if(pin!==adminPin){showMsg("aMsg","Enter your current pin first.","e");return;}
-  const np=document.getElementById("newPin").value.trim();
-  if(!np){showMsg("aMsg","Enter a new pin.","e");return;}
-  adminPin=np;await saveData();
-  showMsg("aMsg","Pin updated!","s");
-  document.getElementById("newPin").value="";
-}
-
-function editEntry(i){
-  const pin=document.getElementById("adminPin").value;
-  if(pin!==adminPin){showMsg("aMsg","Enter admin pin first.","e");return;}
-  editIdx=i;const e=entries[i];
-  document.getElementById("eName").value=e.name;
-  document.getElementById("eEmail").value=e.email||"";
-  picks={};REGS.forEach(r=>{if(e.rp&&e.rp[r.h])picks["r_"+r.h]=e.rp[r.h];});
-  srPicks={};SUPERS.forEach(s=>{if(e.srp&&e.srp[s.id])srPicks[s.id]=e.srp[s.id];});
-  cwsPicks={left:(e.cwsp&&e.cwsp.left)||null,right:(e.cwsp&&e.cwsp.right)||null};
-  buildGrid();
-  setTimeout(()=>{document.getElementById("pChamp").value=e.champ||"";},80);
-  document.getElementById("editMode").style.display="inline";
-  document.querySelectorAll(".tab").forEach(b=>b.classList.remove("on"));
-  document.querySelectorAll(".pnl").forEach(p=>p.classList.remove("on"));
-  document.querySelectorAll(".tab")[0].classList.add("on");
-  document.getElementById("pnl-enter").classList.add("on");
-  document.getElementById("eMsg").style.display="none";
-  window.scrollTo({top:0,behavior:"smooth"});
-}
-
-async function delEntry(i){
-  const pin=document.getElementById("adminPin").value;
-  if(pin!==adminPin){showMsg("aMsg","Enter admin pin first.","e");return;}
-  if(!confirm("Delete "+entries[i].name+"'s entry?"))return;
-  entries.splice(i,1);await saveData();renderAdminList();updPool();
-}
-
-function cancelEdit(){editIdx=-1;resetForm();document.getElementById("editMode").style.display="none";}
 
 function resetForm(){
   ["eName","eEmail"].forEach(id=>document.getElementById(id).value="");
