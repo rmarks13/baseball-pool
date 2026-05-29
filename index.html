@@ -90,6 +90,28 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .cws-side .sr-opts{flex-direction:column;gap:5px}
 .cws-side .sr-btn{font-size:13px;padding:8px 10px}
 .round-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;background:#f0f0ec;color:#888;margin-left:8px;vertical-align:middle;letter-spacing:.03em}
+.lr-name{cursor:pointer}
+.lr-name:hover .nm-link{text-decoration:underline}
+.nm-link{text-decoration:none}
+.ovl{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:flex-start;justify-content:center;padding:24px 12px;overflow-y:auto}
+.ovl.on{display:flex}
+.modal{background:#fff;border-radius:14px;max-width:640px;width:100%;padding:0;box-shadow:0 12px 40px rgba(0,0,0,.25);margin:auto}
+.modal-hd{position:sticky;top:0;background:#1c1c1e;color:#fff;padding:16px 20px;border-radius:14px 14px 0 0;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.modal-hd h3{font-size:16px;font-weight:600}
+.modal-hd p{font-size:11px;opacity:.6;margin-top:2px}
+.modal-x{background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1;opacity:.7;padding:0 4px}
+.modal-x:hover{opacity:1}
+.modal-bd{padding:18px 20px}
+.bk-sec{margin-bottom:18px}
+.bk-sec h4{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-bottom:8px;display:flex;justify-content:space-between}
+.bk-pick{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:7px;font-size:13px;margin-bottom:4px;background:#fafaf8;border:1px solid #e8e7e0}
+.bk-pick .lbl{font-size:11px;color:#999;min-width:120px;flex-shrink:0}
+.bk-pick .val{font-weight:500}
+.bk-pick.ok{background:#e8f5ee;border-color:#bfe6cd}
+.bk-pick.no{background:#fdf0ef;border-color:#f3c9c4}
+.bk-tag{margin-left:auto;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.bk-tag.ok{color:#1a6b3a}
+.bk-tag.no{color:#c0392b}
 @media(max-width:600px){
   .row2,.sr-grid,.cws-finals-grid{grid-template-columns:1fr}
   .stats{grid-template-columns:1fr 1fr}
@@ -212,6 +234,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
 </div>
 
+<div class="ovl" id="bkOvl" onclick="if(event.target===this)closeBracket()">
+  <div class="modal">
+    <div class="modal-hd">
+      <div><h3 id="bkName">Bracket</h3><p id="bkSub"></p></div>
+      <button class="modal-x" onclick="closeBracket()">&times;</button>
+    </div>
+    <div class="modal-bd" id="bkBody"></div>
+  </div>
+</div>
+
 <script>
 const REGS=[
   {n:"Los Angeles",    h:"UCLA",             t:["UCLA","Virginia Tech","Cal Poly","Saint Mary's"]},
@@ -326,6 +358,24 @@ function calcE(e){
   if(e.cwsp&&e.cwsp.right&&results.finRight&&e.cwsp.right===results.finRight)r3+=16;
   if(e.champ&&results.champ&&e.champ===results.champ)r4=32;
   e.r1s=r1;e.r2s=r2;e.r3s=r3;e.r4s=r4;e.score=r1+r2+r3+r4;
+}
+
+// A team is "eliminated" once any earlier completed round produced a different
+// winner than that team — making any future pick of it guaranteed incorrect.
+function isEliminated(team){
+  if(!team)return false;
+  const reg=REGS.find(r=>r.t.includes(team));
+  if(!reg)return false;
+  const rr=results["r_"+reg.h];
+  if(rr&&rr!==team)return true;
+  const sup=SUPERS.find(s=>s.r1===reg.h||s.r2===reg.h);
+  if(sup){
+    const sr=results["sr_"+sup.id];
+    if(sr&&sr!==team)return true;
+    const fr=results[sup.side==="left"?"finLeft":"finRight"];
+    if(fr&&fr!==team)return true;
+  }
+  return false;
 }
 
 function updPool(){
@@ -499,7 +549,7 @@ function renderLB(){
   b.innerHTML=sorted.map((e,i)=>`
     <div class="lr">
       <div style="font-size:13px;font-weight:700;color:${i===0?"#b97a0b":"#999"}">${i<3?m[i]:i+1}</div>
-      <div style="font-weight:600">${e.name}${e.champ?`<span style="font-size:10px;color:#999;font-weight:400;margin-left:6px">picks ${e.champ}</span>`:""}</div>
+      <div class="lr-name" style="font-weight:600" onclick="showBracket(${entries.indexOf(e)})"><span class="nm-link">${e.name}</span>${e.champ?`<span style="font-size:10px;color:#999;font-weight:400;margin-left:6px">picks ${e.champ}</span>`:""}</div>
       <div class="sc">${e.score} pts</div>
       <div class="sc" style="color:#999">${e.r1s||0}</div>
       <div class="sc" style="color:#999">${e.r2s||0}</div>
@@ -507,6 +557,60 @@ function renderLB(){
       <div class="sc" style="color:#999">${e.r4s||0}</div>
     </div>`).join("");
 }
+
+function showBracket(idx){
+  const e=entries[idx];
+  if(!e)return;
+  document.getElementById("bkName").textContent=e.name;
+  document.getElementById("bkSub").textContent=`${e.score} pts · R1 ${e.r1s||0} · R2 ${e.r2s||0} · R3 ${e.r3s||0} · R4 ${e.r4s||0}`;
+
+  // row(label, pickedValue, correctValue) — correctValue undefined => no result yet
+  function row(lbl,pick,correct){
+    if(!pick)return `<div class="bk-pick"><span class="lbl">${lbl}</span><span class="val" style="color:#bbb">— no pick —</span></div>`;
+    let cls="",tag="";
+    if(correct!=null&&correct!==""){
+      const ok=pick===correct;
+      cls=ok?" ok":" no";
+      tag=`<span class="bk-tag ${ok?"ok":"no"}">${ok?"✓":"✕ "+correct}</span>`;
+    }else if(isEliminated(pick)){
+      cls=" no";
+      tag=`<span class="bk-tag no">✕ eliminated</span>`;
+    }
+    return `<div class="bk-pick${cls}"><span class="lbl">${lbl}</span><span class="val">${pick}</span>${tag}</div>`;
+  }
+
+  let html="";
+
+  html+='<div class="bk-sec"><h4><span>Round 1 — Regionals</span><span>2 pts each</span></h4>';
+  REGS.forEach(reg=>{
+    html+=row(reg.n,e.rp&&e.rp[reg.h],results["r_"+reg.h]);
+  });
+  html+="</div>";
+
+  html+='<div class="bk-sec"><h4><span>Round 2 — Super regionals</span><span>4 pts each</span></h4>';
+  SUPERS.forEach(s=>{
+    html+=row(`${s.r1} / ${s.r2}`,e.srp&&e.srp[s.id],results["sr_"+s.id]);
+  });
+  html+="</div>";
+
+  html+='<div class="bk-sec"><h4><span>Round 3 — CWS finals</span><span>16 pts each</span></h4>';
+  html+=row("Left finalist",e.cwsp&&e.cwsp.left,results.finLeft);
+  html+=row("Right finalist",e.cwsp&&e.cwsp.right,results.finRight);
+  html+="</div>";
+
+  html+='<div class="bk-sec"><h4><span>Round 4 — National champion</span><span>32 pts</span></h4>';
+  html+=row("🏆 Champion",e.champ,results.champ);
+  html+="</div>";
+
+  document.getElementById("bkBody").innerHTML=html;
+  document.getElementById("bkOvl").classList.add("on");
+}
+
+function closeBracket(){
+  document.getElementById("bkOvl").classList.remove("on");
+}
+
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeBracket();});
 
 function resetForm(){
   ["eName","eEmail"].forEach(id=>document.getElementById(id).value="");
