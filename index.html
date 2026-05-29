@@ -136,13 +136,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 <div class="wrap">
   <div class="tabs">
-    <button class="tab on" onclick="swTab('enter',this)">Enter picks</button>
-    <button class="tab" onclick="swTab('leaderboard',this)">Leaderboard</button>
+    <button class="tab" onclick="swTab('enter',this)" style="display:none">Enter picks</button>
+    <button class="tab on" onclick="swTab('leaderboard',this)">Leaderboard</button>
     <button class="tab" onclick="swTab('admin',this)">How results work</button>
   </div>
 
   <!-- ENTER PICKS -->
-  <div class="pnl on" id="pnl-enter">
+  <div class="pnl" id="pnl-enter">
     <div class="card">
       <h3>Your info</h3>
       <div class="row2">
@@ -199,7 +199,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
 
   <!-- LEADERBOARD -->
-  <div class="pnl" id="pnl-leaderboard">
+  <div class="pnl on" id="pnl-leaderboard">
     <div class="stats">
       <div class="st"><div class="st-n" id="stE">–</div><div class="st-l">Entrants</div></div>
       <div class="st"><div class="st-n">128</div><div class="st-l">Max pts</div></div>
@@ -626,6 +626,7 @@ function showMsg(id,txt,t){
 
 buildGrid();
 updPool();
+refresh();
 </script>
 </body>
 </html>
